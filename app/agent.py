@@ -16,6 +16,13 @@ from agno.agent import Agent
 from agno.models.openai import OpenAIChat
 from agno.storage.sqlite import SqliteStorage
 
+try:
+    # Só importado quando AI_PROVIDER=gemini — evita quebrar ambientes
+    # que rodam só com OpenAI.
+    from agno.models.google import Gemini  # type: ignore
+except ImportError:  # pragma: no cover
+    Gemini = None  # type: ignore
+
 from .config import get_settings
 from .logging_conf import get_logger
 
@@ -169,9 +176,20 @@ def build_agent(session_id: str) -> Agent:
         )
 
     settings = get_settings()
+
+    if settings.ai_provider == "gemini":
+        if Gemini is None:
+            raise RuntimeError(
+                "AI_PROVIDER=gemini mas 'agno.models.google.Gemini' não está "
+                "disponível. Verifique se 'google-genai' está instalado."
+            )
+        model = Gemini(id=settings.gemini_model, api_key=settings.google_api_key)
+    else:
+        model = OpenAIChat(id=settings.openai_model, api_key=settings.openai_api_key)
+
     return Agent(
         name="Luz - PagLuz",
-        model=OpenAIChat(id=settings.openai_model, api_key=settings.openai_api_key),
+        model=model,
         description="Recepcionista virtual da PagLuz (energia limpa com desconto).",
         instructions=SYSTEM_PROMPT,
         tools=[encerrar_atendimento],
