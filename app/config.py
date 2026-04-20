@@ -24,7 +24,7 @@ class Settings(BaseSettings):
 
     # OpenAI
     openai_api_key: str | None = Field(None, alias="OPENAI_API_KEY")
-    openai_model: str = Field("gpt-4o-mini", alias="OPENAI_MODEL")
+    openai_model: str = Field("gpt-4.1-mini", alias="OPENAI_MODEL")
     openai_whisper_model: str = Field("whisper-1", alias="OPENAI_WHISPER_MODEL")
 
     # Google (Gemini)
