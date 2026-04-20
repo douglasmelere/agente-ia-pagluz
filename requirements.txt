@@ -6,7 +6,7 @@ pydantic-settings==2.6.1
 python-multipart==0.0.17
 
 # --- HTTP Clients ---
-httpx==0.27.2
+httpx>=0.27.2
 aiofiles==24.1.0
 
 # --- Painel Web / Persistência ---
@@ -18,7 +18,7 @@ sqlalchemy>=2.0.30
 # --- Agente de IA ---
 agno==1.8.4
 openai>=1.75.0
-google-genai>=0.8.0
+google-genai>=1.0.0
 
 # --- Observabilidade / Logs ---
 structlog==24.4.0
