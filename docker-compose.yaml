@@ -41,15 +41,6 @@ services:
       retries: 3
       start_period: 20s
 
-    # Profile "local" → só sobe se explicitamente pedido. No Coolify, ignorado.
-    profiles:
-      - local
-      - default
-
-    ports:
-      # Exposto só em dev. No Coolify o Traefik faz o proxy pela rede interna.
-      - "8000:8000"
-
 volumes:
   pagluz_data:
     driver: local
