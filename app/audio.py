@@ -102,6 +102,6 @@ _transcriber: _Transcriber | None = None
 def get_transcriber() -> _Transcriber:
     global _transcriber
     if _transcriber is None:
-        provider = get_settings().ai_provider
+        provider = get_settings().effective_audio_provider
         _transcriber = GeminiTranscriber() if provider == "gemini" else WhisperTranscriber()
     return _transcriber

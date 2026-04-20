@@ -17,10 +17,14 @@ class Settings(BaseSettings):
 
     # Seleção de provedor de IA (chat + áudio). OpenAI permanece como fallback.
     ai_provider: Literal["gemini", "openai"] = Field("gemini", alias="AI_PROVIDER")
+    # Provedor separado para transcrição de áudio.
+    # Por padrão segue ai_provider, mas pode ser forçado para "gemini" mesmo
+    # quando ai_provider=openai (evita pagar Whisper ou contornar restrições).
+    audio_provider: Literal["gemini", "openai"] | None = Field(None, alias="AUDIO_PROVIDER")
 
     # OpenAI
     openai_api_key: str | None = Field(None, alias="OPENAI_API_KEY")
-    openai_model: str = Field("gpt-4o", alias="OPENAI_MODEL")
+    openai_model: str = Field("gpt-4o-mini", alias="OPENAI_MODEL")
     openai_whisper_model: str = Field("whisper-1", alias="OPENAI_WHISPER_MODEL")
 
     # Google (Gemini)
@@ -49,12 +53,22 @@ class Settings(BaseSettings):
     host: str = Field("0.0.0.0", alias="HOST")
     port: int = Field(8000, alias="PORT")
 
+    @property
+    def effective_audio_provider(self) -> str:
+        """Provedor efetivo para transcrição: AUDIO_PROVIDER > AI_PROVIDER."""
+        return self.audio_provider or self.ai_provider
+
     @model_validator(mode="after")
     def _check_provider_key(self) -> "Settings":
         if self.ai_provider == "gemini" and not self.google_api_key:
             raise ValueError("AI_PROVIDER=gemini exige GOOGLE_API_KEY.")
         if self.ai_provider == "openai" and not self.openai_api_key:
             raise ValueError("AI_PROVIDER=openai exige OPENAI_API_KEY.")
+        # Valida chave do provider de áudio, se explicitamente definido.
+        if self.audio_provider == "gemini" and not self.google_api_key:
+            raise ValueError("AUDIO_PROVIDER=gemini exige GOOGLE_API_KEY.")
+        if self.audio_provider == "openai" and not self.openai_api_key:
+            raise ValueError("AUDIO_PROVIDER=openai exige OPENAI_API_KEY.")
         return self
 
 
