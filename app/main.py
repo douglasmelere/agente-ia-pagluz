@@ -138,15 +138,29 @@ async def uazapi_webhook(request: Request) -> dict[str, Any]:
     raw = await request.json()
     payload = UazapiWebhookPayload.model_validate(raw)
     event = payload.normalized_event()
-    data = payload.data or {}
+    # Algumas versões da uazapiGO aninham em `data`; outras colocam
+    # `message`/`chat` no nível raiz. Se `data` vier vazio, caímos no raw.
+    data = payload.data or (raw if isinstance(raw, dict) else {})
 
     # --- Mensagens recebidas -----------------------------------------------
     if _is_message_event(event):
+        message = data.get("message") or {}
         key = data.get("key") or {}
-        if key.get("fromMe") is True:
+        from_me = (
+            key.get("fromMe") is True
+            or message.get("fromMe") is True
+            or message.get("wasSentByApi") is True
+        )
+        if from_me:
             return {"ok": True, "skipped": "fromMe"}
 
-        remote_jid = key.get("remoteJid") or data.get("chatid") or data.get("from")
+        remote_jid = (
+            key.get("remoteJid")
+            or message.get("chatid")
+            or data.get("chatid")
+            or (data.get("chat") or {}).get("wa_chatid")
+            or data.get("from")
+        )
         if not remote_jid:
             logger.warning("webhook.no_remote_jid", raw=raw)
             return {"ok": False, "reason": "missing remoteJid"}
@@ -161,7 +175,11 @@ async def uazapi_webhook(request: Request) -> dict[str, Any]:
             asyncio.create_task(_handle_audio(remote_jid, audio_id))
             return {"ok": True, "handled": "audio-async"}
 
-        logger.info("webhook.unsupported_message_type", event=event, keys=list(data.keys()))
+        logger.info(
+            "webhook.unsupported_message_type",
+            event_type=event,
+            keys=list(data.keys()),
+        )
         return {"ok": True, "ignored": "unsupported-message-type"}
 
     # --- Presença (digitando / parou de digitar) ---------------------------
@@ -186,7 +204,7 @@ async def uazapi_webhook(request: Request) -> dict[str, Any]:
                 await queue_manager.handle_presence(remote_jid, str(presence))
         return {"ok": True, "presence": presence}
 
-    logger.info("webhook.ignored", event=event)
+    logger.info("webhook.ignored", event_type=event)
     return {"ok": True, "ignored": event}
 
 
@@ -238,10 +256,20 @@ def _jid_to_number(remote_jid: str) -> str:
 
 
 def _extract_message(data: dict[str, Any]) -> tuple[str, str | None, str | None]:
-    """Retorna (tipo, texto, audio_id). Tipo: 'text' | 'audio' | 'other'."""
-    message = data.get("message") or {}
-    msg_type = (data.get("messageType") or "").lower()
+    """Retorna (tipo, texto, audio_id). Tipo: 'text' | 'audio' | 'other'.
 
+    Lida com dois formatos da uazapiGO:
+      - Baileys-like: data.message.conversation / extendedTextMessage (nested)
+      - uazapiGO flat: data.message.{text,content,type,messageType}
+    """
+    message = data.get("message") or {}
+    msg_type = (
+        (message.get("messageType") or data.get("messageType") or "")
+        .lower()
+    )
+    simple_type = (message.get("type") or "").lower()
+
+    # Baileys nested formats
     if "conversation" in message and message["conversation"]:
         return "text", message["conversation"], None
     if "extendedTextMessage" in message:
@@ -249,13 +277,29 @@ def _extract_message(data: dict[str, Any]) -> tuple[str, str | None, str | None]
         if text:
             return "text", text, None
 
+    # uazapiGO flat formats
+    if simple_type == "text" or msg_type in {"conversation", "extendedtextmessage"}:
+        text = message.get("text") or message.get("content")
+        if text:
+            return "text", str(text), None
+
     flat_text = data.get("text") or data.get("body")
     if flat_text and msg_type in {"", "text", "conversation"}:
         return "text", str(flat_text), None
 
-    if "audioMessage" in message or msg_type in {"audiomessage", "audio", "ptt"}:
+    if (
+        "audioMessage" in message
+        or msg_type in {"audiomessage", "audio", "ptt"}
+        or simple_type in {"audio", "ptt"}
+    ):
         key = data.get("key") or {}
-        audio_id = key.get("id") or data.get("messageId") or data.get("id")
+        audio_id = (
+            key.get("id")
+            or message.get("messageid")
+            or message.get("id")
+            or data.get("messageId")
+            or data.get("id")
+        )
         return "audio", None, audio_id
 
     return "other", None, None
