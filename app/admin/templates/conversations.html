@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block title %}Conversas · PagLuz Admin{% endblock %}
+{% block content %}
+  <h2>Conversas</h2>
+
+  <div class="tabs">
+    <a href="/admin/conversations?filter=all"    class="{{ 'active' if filter != 'active' }}">Todas</a>
+    <a href="/admin/conversations?filter=active" class="{{ 'active' if filter == 'active' }}">Apenas com IA ativa</a>
+  </div>
+
+  <div class="card">
+    {% if conversations %}
+    <table>
+      <thead>
+        <tr>
+          <th>Número</th>
+          <th>IA</th>
+          <th>Último recebido</th>
+          <th>Ativada por</th>
+          <th>Desativada por</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in conversations %}
+        <tr>
+          <td>
+            <strong>{{ c.remote_jid.split('@')[0] }}</strong>
+            <div class="muted small">{{ c.remote_jid }}</div>
+          </td>
+          <td>
+            {% if c.ai_active %}
+              <span class="badge on">ATIVA</span>
+            {% else %}
+              <span class="badge off">INATIVA</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if c.last_inbound_at %}
+              <div class="muted small">{{ c.last_inbound_at }}</div>
+              <div>{{ c.last_inbound_preview or '—' }}</div>
+            {% else %}
+              <span class="muted">—</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if c.triggered_reason %}
+              <div>{{ c.triggered_reason }}</div>
+              <div class="muted small">{{ c.triggered_at }}</div>
+            {% else %}
+              <span class="muted">—</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if c.deactivated_reason %}
+              <div>{{ c.deactivated_reason }}</div>
+              <div class="muted small">{{ c.deactivated_at }}</div>
+            {% else %}
+              <span class="muted">—</span>
+            {% endif %}
+          </td>
+          <td>
+            <form class="inline" method="post" action="/admin/conversations/{{ c.remote_jid }}/toggle">
+              <button class="btn {{ 'danger' if c.ai_active else 'primary' }}" type="submit">
+                {{ 'Desativar IA' if c.ai_active else 'Ativar IA' }}
+              </button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+      <p class="muted">Nenhuma conversa registrada ainda.</p>
+    {% endif %}
+  </div>
+{% endblock %}

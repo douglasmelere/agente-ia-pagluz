@@ -1,0 +1,55 @@
+# ---------------------------------------------------------------------------
+# Coolify consome este compose diretamente.
+# - Volume ``pagluz_data`` persiste os SQLite (sessions.db + admin.db).
+# - ``ports`` é intencionalmente omitido: no Coolify o reverse proxy (Traefik)
+#   fala com o container pela rede interna, expondo via domínio configurado.
+# - Para rodar localmente (dev/test), use:
+#       docker compose --profile local up --build
+# ---------------------------------------------------------------------------
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: pagluz-ia:latest
+    container_name: pagluz-ia
+    restart: unless-stopped
+
+    # Env vars: preferir setar no painel do Coolify. Em dev local, pode
+    # apontar pra um .env com `env_file: .env`.
+    environment:
+      - AGENT_DB_FILE=/data/sessions.db
+      - ADMIN_DB_FILE=/data/admin.db
+      - HOST=0.0.0.0
+      - PORT=8000
+      - LOG_LEVEL=INFO
+
+    volumes:
+      - pagluz_data:/data
+
+    expose:
+      - "8000"
+
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/health',timeout=5).status==200 else 1)"
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+    # Profile "local" → só sobe se explicitamente pedido. No Coolify, ignorado.
+    profiles:
+      - local
+      - default
+
+    ports:
+      # Exposto só em dev. No Coolify o Traefik faz o proxy pela rede interna.
+      - "8000:8000"
+
+volumes:
+  pagluz_data:
+    driver: local

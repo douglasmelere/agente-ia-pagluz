@@ -1,0 +1,35 @@
+# Git
+.git
+.gitignore
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Dados locais (nunca empacote banco de dev na imagem)
+*.db
+*.db-journal
+sessions.db
+admin.db
+
+# Env local — sempre setar via Coolify, nunca via imagem
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+.DS_Store
+
+# Logs / temp
+*.log
+tmp/

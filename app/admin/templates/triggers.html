@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}Triggers · PagLuz Admin{% endblock %}
+{% block content %}
+  <h2>Gatilhos de ativação da IA</h2>
+  <p class="muted">
+    Sempre que uma mensagem recebida contiver (case-insensitive) um destes
+    termos/frases, e a conversa estiver inativa, a IA é ativada automaticamente.
+  </p>
+
+  <div class="card">
+    <form method="post" action="/admin/triggers">
+      <div class="row">
+        <div>
+          <label for="phrase">Nova frase gatilho</label>
+          <input id="phrase" name="phrase" type="text" placeholder="ex.: vim pela consultoria" required>
+        </div>
+        <div style="flex: 0 0 auto;">
+          <button class="btn primary" type="submit">Adicionar</button>
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <div class="card">
+    {% if triggers %}
+    <table>
+      <thead>
+        <tr>
+          <th>Frase</th>
+          <th>Status</th>
+          <th>Criado em</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for t in triggers %}
+        <tr>
+          <td><strong>{{ t.phrase }}</strong></td>
+          <td>
+            {% if t.active %}
+              <span class="badge on">ATIVO</span>
+            {% else %}
+              <span class="badge off">DESLIGADO</span>
+            {% endif %}
+          </td>
+          <td class="muted small">{{ t.created_at }}</td>
+          <td>
+            <form class="inline" method="post" action="/admin/triggers/{{ t.id }}/toggle">
+              <button class="btn" type="submit">{{ 'Desligar' if t.active else 'Ligar' }}</button>
+            </form>
+            <form class="inline" method="post" action="/admin/triggers/{{ t.id }}/delete"
+                  onsubmit="return confirm('Remover esta trigger?');">
+              <button class="btn danger" type="submit">Remover</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+      <p class="muted">Nenhuma trigger cadastrada. Sem triggers, a IA nunca é ativada automaticamente.</p>
+    {% endif %}
+  </div>
+{% endblock %}

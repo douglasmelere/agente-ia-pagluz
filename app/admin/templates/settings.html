@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Configurações · PagLuz Admin{% endblock %}
+{% block content %}
+  <h2>Configurações</h2>
+
+  <div class="card">
+    <form method="post" action="/admin/settings">
+      <div style="margin-bottom: 16px;">
+        <label for="default_mode">Modo padrão para conversas novas</label>
+        <select id="default_mode" name="default_mode">
+          {% for m in valid_modes %}
+            <option value="{{ m }}" {{ 'selected' if settings.get('default_mode') == m else '' }}>{{ m }}</option>
+          {% endfor %}
+        </select>
+        <p class="muted small" style="margin-top: 6px;">
+          <strong>trigger_required</strong>: IA só atende se a mensagem bater
+          com alguma trigger ativa OU se a conversa for ativada manualmente.<br>
+          <strong>always_on</strong>: toda conversa nova já começa com a IA ligada.
+        </p>
+      </div>
+      <button class="btn primary" type="submit">Salvar</button>
+    </form>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0; font-size:14px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.4px;">
+      Todas as chaves
+    </h3>
+    <table>
+      <thead><tr><th>Chave</th><th>Valor</th></tr></thead>
+      <tbody>
+        {% for k, v in settings.items() %}
+          <tr><td>{{ k }}</td><td><code>{{ v }}</code></td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endblock %}
